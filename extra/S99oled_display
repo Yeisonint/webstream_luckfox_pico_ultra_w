@@ -1,0 +1,28 @@
+#!/bin/sh
+
+/root/ssd1306_bin -I 128x32 -n 2
+sleep 1
+
+
+case $1 in
+        start)
+            echo "Start display information"
+            while true; do
+                SSID=$(wpa_cli status | grep ^ssid= | cut -d= -f2)
+                SIGNAL=$(iw wlan0 link | grep signal | awk '{print $2 " " $3}')
+                IP_ETH=$(ip -4 addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1)
+                IP_WLAN=$(ip -4 addr show wlan0 | grep inet | awk '{print $2}' | cut -d/ -f1)
+                MSG="${SSID}\nSignal ${SIGNAL}\nE:${IP_ETH}\nW:${IP_WLAN}"
+                /root/ssd1306_bin -c -n 2
+                /root/ssd1306_bin -m "$MSG" -n 2
+                sleep 2
+            done
+            ;;
+        stop)
+                echo "Stop display information"
+                killall S99oled_display
+                ;;
+        *)
+                exit 1
+                ;;
+esac
