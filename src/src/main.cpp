@@ -1,57 +1,40 @@
-#include <libwebsockets.h>
-#include <string.h>
+#include <websocketpp/config/asio_no_tls.hpp>
+#include <websocketpp/server.hpp>
+#include <iostream>
 
-static int callback(struct lws *wsi, enum lws_callback_reasons reason,
-                    void *user, void *in, size_t len)
-{
-    switch (reason) {
-        case LWS_CALLBACK_ESTABLISHED:
-            lwsl_user("Cliente conectado\n");
-            break;
+#include "video_server.hpp"
 
-        case LWS_CALLBACK_SERVER_WRITEABLE: {
-            const char *msg = "Hola desde Luckfox\n";
-            unsigned char buf[LWS_PRE + 128] = {0};
-            size_t msg_len = strlen(msg);
+typedef websocketpp::server<websocketpp::config::asio> server;
+VideoServer vs(640, 480, RK_VIDEO_ID_AVC);
 
-            memcpy(&buf[LWS_PRE], msg, msg_len);
-            lws_write(wsi, &buf[LWS_PRE], msg_len, LWS_WRITE_TEXT);
-            break;
-        }
+void on_message(server* s, websocketpp::connection_hdl hdl, server::message_ptr msg) {
+  std::cout << "Mensaje recibido: " << msg->get_payload() << std::endl;
 
-        default:
-            break;
-    }
-    return 0;
+  // Responder al cliente con el mismo mensaje
+  s->send(hdl, "Echo: " + msg->get_payload(), msg->get_opcode());
+  char text[64];
+  sprintf(text, "Video frame size: %ld", vs.get_video_data().size);
+  s->send(hdl, text, msg->get_opcode());
 }
 
-static struct lws_protocols protocols[] = {
-    {
-        .name = "my-protocol",
-        .callback = callback,
-        .per_session_data_size = 0,
-        .rx_buffer_size = 0,
-    },
-    { NULL, NULL, 0, 0 } // terminador
-};
+int main(int argc, char *argv[])
+{
+  // system("RkLunch-stop.sh");
 
-int main(void) {
-    struct lws_context_creation_info info = {0};
-    info.port = 9000;
-    info.protocols = protocols;
-    info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+  server echo_server;
 
-    struct lws_context *context = lws_create_context(&info);
-    if (!context) {
-        lwsl_err("Error creando el contexto\n");
-        return 1;
-    }
+  std::cout << "Start server" << std::endl;
 
-    lwsl_user("Servidor WebSocket escuchando en ws://localhost:9000\n");
-
-    while (1)
-        lws_service(context, 0);
-
-    lws_context_destroy(context);
-    return 0;
+  try {
+    echo_server.set_message_handler(std::bind(&on_message, &echo_server, std::placeholders::_1, std::placeholders::_2));
+    echo_server.init_asio();
+    echo_server.set_reuse_addr(true);
+    echo_server.listen(websocketpp::lib::asio::ip::tcp::v4(), 9002);
+    echo_server.start_accept();
+    echo_server.run();
+  } catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
+  
+  return 0;
 }

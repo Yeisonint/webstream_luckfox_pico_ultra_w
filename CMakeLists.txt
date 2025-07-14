@@ -9,17 +9,20 @@ if (NOT SDK_PATH)
 else()
     set(CMAKE_C_COMPILER "${SDK_PATH}/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc")
     set(CMAKE_CXX_COMPILER "${SDK_PATH}/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-g++")
+    set(CMAKE_CXX_STANDARD 11)
 endif()
 
 project(webstream)
 
 set(CMAKE_INSTALL_RPATH "$ORIGIN/lib")
 add_definitions(-DRV1106_1103)
+add_definitions(-DASIO_STANDALONE)
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/uclibc)
 
 #Opencv 4
-set(OpenCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/uclibc/lib/cmake/opencv4")
+# set(OpenCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/uclibc/lib/cmake/opencv4")
+set(OpenCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/opencv-mobile-4.10.0-luckfox-pico/lib/cmake/opencv4")
 find_package(OpenCV REQUIRED)
 #Thread
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -54,13 +57,14 @@ target_link_libraries(${PROJECT_NAME}
                     pthread
                     rtsp
                     rga
-                    websockets
                     )
 
 
 target_include_directories(${PROJECT_NAME} PRIVATE                        
                             ${OpenCV_INCLUDE_DIRS}
                             src/include
+                            ${PROJECT_SOURCE_DIR}/asio/asio/include
+                            ${PROJECT_SOURCE_DIR}/websocketpp
                             ${CMAKE_CURRENT_SOURCE_DIR}
                             ${CMAKE_CURRENT_SOURCE_DIR}/utils
                             ${CMAKE_CURRENT_SOURCE_DIR}/common 
