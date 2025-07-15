@@ -27,6 +27,9 @@ find_package(OpenCV REQUIRED)
 #Thread
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+# OpenSSL
+set(OPENSSL_LIB_DIR "${CMAKE_SOURCE_DIR}/lib/uclibc")
+set(OPENSSL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB SRC_FILES "${SRC_DIR}/src/*.cpp")
@@ -57,6 +60,8 @@ target_link_libraries(${PROJECT_NAME}
                     pthread
                     rtsp
                     rga
+                    ${OPENSSL_LIB_DIR}/libssl.a
+                    ${OPENSSL_LIB_DIR}/libcrypto.a
                     )
 
 
@@ -70,6 +75,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                             ${CMAKE_CURRENT_SOURCE_DIR}/common 
                             ${CMAKE_CURRENT_SOURCE_DIR}/common/isp3.x   
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/openssl
                             ${CMAKE_CURRENT_SOURCE_DIR}/include/rknn
                             ${CMAKE_CURRENT_SOURCE_DIR}/include/librga 
                             ${CMAKE_CURRENT_SOURCE_DIR}/include/rkaiq

@@ -1,0 +1,31 @@
+<video id="video" autoplay muted playsinline></video>
+<script>
+const video = document.getElementById("video");
+const ws = new WebSocket("wss://192.168.50.107:9000");
+ws.binaryType = "arraybuffer";
+
+const decoder = new VideoDecoder({
+  output: frame => {
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(frame, 0, 0);
+    frame.close();
+  },
+  error: e => console.error("Decoder error:", e)
+});
+
+decoder.configure({
+  codec: "avc1.42E01E", // H.264 baseline
+  codedWidth: 640,
+  codedHeight: 480,
+});
+
+ws.onmessage = e => {
+  const chunk = new EncodedVideoChunk({
+    type: "key", // o "delta" si no es I-frame
+    timestamp: performance.now() * 1000,
+    data: new Uint8Array(e.data)
+  });
+  decoder.decode(chunk);
+};
+</script>
+<canvas id="canvas" width="640" height="480"></canvas>
