@@ -11,13 +11,14 @@
 #include <sys/poll.h>
 #include <time.h>
 #include <unistd.h>
+#include <rtc/rtc.hpp>
 #include <vector>
 #include <thread>
 #include <chrono>
 #include <mutex>
 
 #include "luckfox_mpi.h"
-#include "websocket_server_tls.hpp"
+#include "web_rtc_streamer.hpp"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -38,8 +39,7 @@ video_data video_ready_data;
 int main(int argc, char *argv[])
 {
   system("RkLunch-stop.sh");
-  WebSocketServer ws_server;
-  ws_server.start(9000);
+  WebRTCServer ws_server(9000, "/root/cert.pem", "/root/key.pem");
 
   RK_S32 s32Ret = 0;
 
@@ -150,7 +150,8 @@ int main(int argc, char *argv[])
         // memcpy(video_ready_data.pData, pData, size);
         // video_ready_data.size = size;
         // video_ready_data.frame_pts = frame_pts;
-        ws_server.send_frame(static_cast<const uint8_t*>(pData), size, frame_pts);
+        // ws_server.send_frame(static_cast<const uint8_t*>(pData), size, frame_pts);
+        ws_server.send_frame(static_cast<const uint8_t*>(pData), (size_t)size);
       }
       RK_U64 nowUs = TEST_COMM_GetNowUs();
       fps = (float)1000000 / (float)(nowUs - enc_frame.stVFrame.u64PTS);

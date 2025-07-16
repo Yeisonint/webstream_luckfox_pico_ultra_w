@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
+
+
 set(SDK_PATH $ENV{LUCKFOX_SDK_PATH})
 set(GLIBC_COMPILER $ENV{GLIBC_COMPILER})
 
@@ -9,7 +11,8 @@ if (NOT SDK_PATH)
 else()
     set(CMAKE_C_COMPILER "${SDK_PATH}/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc")
     set(CMAKE_CXX_COMPILER "${SDK_PATH}/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-g++")
-    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
 project(webstream)
@@ -28,7 +31,7 @@ find_package(OpenCV REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 # OpenSSL
-set(OPENSSL_LIB_DIR "${CMAKE_SOURCE_DIR}/lib/uclibc")
+set(OPENSSL_LIB_DIR "${CMAKE_SOURCE_DIR}/lib/external")
 set(OPENSSL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -46,6 +49,7 @@ set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link,${CMAKE_C
 target_link_directories(${PROJECT_NAME} PRIVATE
     ${SDK_PATH}/sysdrv/out/rootfs_uclibc_rv1106/lib
     ${SDK_PATH}/sysdrv/out/rootfs_uclibc_rv1106/usr/lib
+    ${OPENSSL_LIB_DIR}
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -60,8 +64,16 @@ target_link_libraries(${PROJECT_NAME}
                     pthread
                     rtsp
                     rga
-                    ${OPENSSL_LIB_DIR}/libssl.a
-                    ${OPENSSL_LIB_DIR}/libcrypto.a
+                    "${CMAKE_SOURCE_DIR}/lib/external/libdatachannel.a"
+                    "${CMAKE_SOURCE_DIR}/lib/external/libjuice.a"
+                    "${CMAKE_SOURCE_DIR}/lib/external/libsrtp2.a"
+                    "${CMAKE_SOURCE_DIR}/lib/external/libusrsctp.a"
+                    -Wl,--start-group
+                        ${OPENSSL_LIB_DIR}/libssl.a
+                        ${OPENSSL_LIB_DIR}/libcrypto.a
+                    -Wl,--end-group
+                    dl
+                    z
                     )
 
 
@@ -75,6 +87,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                             ${CMAKE_CURRENT_SOURCE_DIR}/common 
                             ${CMAKE_CURRENT_SOURCE_DIR}/common/isp3.x   
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/rtc
                             ${CMAKE_CURRENT_SOURCE_DIR}/include/openssl
                             ${CMAKE_CURRENT_SOURCE_DIR}/include/rknn
                             ${CMAKE_CURRENT_SOURCE_DIR}/include/librga 
