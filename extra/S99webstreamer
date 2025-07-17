@@ -1,0 +1,19 @@
+#!/bin/sh
+sleep 10
+
+
+case $1 in
+        start)
+            echo "Start web streamer"
+            python3 -m http.server 8080 --bind 0.0.0.0 --directory /root/web &
+            /root/webstream
+            ;;
+        stop)
+                echo "Stop web streamer"
+                killall webstream
+                pkill -f "python3 -m http.server"
+                ;;
+        *)
+                exit 1
+                ;;
+esac

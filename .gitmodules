@@ -1,6 +1,6 @@
 [submodule "asio"]
-	path = asio
+	path = lib/asio
 	url = https://github.com/chriskohlhoff/asio.git
 [submodule "websocketpp"]
-	path = websocketpp
+	path = lib/websocketpp
 	url = https://github.com/zaphoyd/websocketpp.git

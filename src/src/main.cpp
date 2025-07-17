@@ -15,9 +15,12 @@
 #include <thread>
 #include <chrono>
 #include <mutex>
+#include <iostream>
 
 #include "luckfox_mpi.h"
-#include "websocket_server_tls.hpp"
+// #include "websocket_server_tls.hpp"
+#include "websocket_server.hpp"
+#include "mjpeg_streamer.hpp"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -37,9 +40,11 @@ video_data video_ready_data;
 
 int main(int argc, char *argv[])
 {
+  signal(SIGPIPE, SIG_IGN);
   system("RkLunch-stop.sh");
   WebSocketServer ws_server;
-  ws_server.start(9000);
+  MJPEGStreamer streamer(9000);
+  ws_server.start(9001);
 
   RK_S32 s32Ret = 0;
 
@@ -53,8 +58,6 @@ int main(int argc, char *argv[])
   // enc_frame
   VENC_STREAM_S stFrame;
   stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
-  RK_U64 H264_PTS = 0;
-  RK_U32 H264_TimeRef = 0;
   VIDEO_FRAME_INFO_S stViFrame;
 
   // Create Pool
@@ -102,7 +105,8 @@ int main(int argc, char *argv[])
   vi_chn_init(0, width, height);
 
   // venc init
-  RK_CODEC_ID_E enCodecType = RK_VIDEO_ID_AVC;
+  // RK_CODEC_ID_E enCodecType = RK_VIDEO_ID_AVC;
+  RK_CODEC_ID_E enCodecType = RK_VIDEO_ID_MJPEG;
   venc_init(0, width, height, enCodecType);
 
   printf("init success\n");
@@ -113,7 +117,7 @@ int main(int argc, char *argv[])
   while (1)
   {
     // get vi frame
-    enc_frame.stVFrame.u32TimeRef = H264_TimeRef++;
+    enc_frame.stVFrame.u32TimeRef++;
     enc_frame.stVFrame.u64PTS = TEST_COMM_GetNowUs();
     s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, -1);
     if (s32Ret == RK_SUCCESS)
@@ -144,13 +148,8 @@ int main(int argc, char *argv[])
         void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
         size = stFrame.pstPack->u32Len;
         frame_pts = stFrame.pstPack->u64PTS;
-        // std::lock_guard<std::mutex> lock(frame_mutex);
-        // free(video_ready_data.pData);
-        // video_ready_data.pData = (uint8_t*)malloc(size);
-        // memcpy(video_ready_data.pData, pData, size);
-        // video_ready_data.size = size;
-        // video_ready_data.frame_pts = frame_pts;
-        ws_server.send_frame(static_cast<const uint8_t*>(pData), size, frame_pts);
+        // sender.pushFrame(static_cast<const uint8_t*>(pData), size, frame_pts);
+        streamer.push_frame(static_cast<const uint8_t*>(pData), size);
       }
       RK_U64 nowUs = TEST_COMM_GetNowUs();
       fps = (float)1000000 / (float)(nowUs - enc_frame.stVFrame.u64PTS);

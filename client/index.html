@@ -1,31 +1,99 @@
-<video id="video" autoplay muted playsinline></video>
-<script>
-const video = document.getElementById("video");
-const ws = new WebSocket("wss://192.168.50.107:9000");
-ws.binaryType = "arraybuffer";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Web PWM Control</title>
+  <style>
+    body {
+      background: #1a1a1a;
+      color: #eee;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    img {
+      width: 640px;
+      border: 2px solid #444;
+      margin: 20px 0;
+    }
+    #status {
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>WASD / Joystick</h1>
+  <div id="status">Connecting...</div>
+  <img id="video-stream" alt="Stream" />
 
-const decoder = new VideoDecoder({
-  output: frame => {
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(frame, 0, 0);
-    frame.close();
-  },
-  error: e => console.error("Decoder error:", e)
-});
+  <script>
+    const img = document.getElementById("video-stream");
+    img.src = "http://" + location.hostname + ":9000";
 
-decoder.configure({
-  codec: "avc1.42E01E", // H.264 baseline
-  codedWidth: 640,
-  codedHeight: 480,
-});
+    const ws = new WebSocket("ws://" + location.hostname + ":9001");
+    const status = document.getElementById("status");
 
-ws.onmessage = e => {
-  const chunk = new EncodedVideoChunk({
-    type: "key", // o "delta" si no es I-frame
-    timestamp: performance.now() * 1000,
-    data: new Uint8Array(e.data)
-  });
-  decoder.decode(chunk);
-};
-</script>
-<canvas id="canvas" width="640" height="480"></canvas>
+    const keyMap = {
+      w: "forward",
+      s: "backward",
+      a: "left",
+      d: "right"
+    };
+
+    let activeKey = null;
+    let lastGamepadCommand = "stop";
+
+    ws.onopen = () => status.textContent = "✅ WebSocket connected";
+    ws.onclose = () => status.textContent = "❌ WebSocket disconnected";
+
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toLowerCase();
+      const cmd = keyMap[key];
+      if (cmd && activeKey !== key) {
+        activeKey = key;
+        ws.send(`${cmd}:50`);
+      }
+    });
+
+    document.addEventListener("keyup", (e) => {
+      const key = e.key.toLowerCase();
+      if (keyMap[key] && activeKey === key) {
+        activeKey = null;
+        ws.send("stop");
+      }
+    });
+
+    let currentGamepadCommand = "stop";
+
+    function pollGamepad() {
+    const gp = navigator.getGamepads()[0];
+    if (!gp) return;
+
+    let command = "stop";
+    if (gp.buttons[12].pressed) command = "forward";
+    else if (gp.buttons[13].pressed) command = "backward";
+    else if (gp.buttons[14].pressed) command = "left";
+    else if (gp.buttons[15].pressed) command = "right";
+
+    // Enviar continuamente mientras esté presionado
+    if (ws.readyState === WebSocket.OPEN) {
+        if (command !== "stop") {
+        ws.send(`${command}:50`);
+        } else if (currentGamepadCommand !== "stop") {
+        ws.send("stop");
+        }
+    }
+
+    currentGamepadCommand = command;
+    }
+
+    setInterval(() => {
+      if (activeKey && ws.readyState === WebSocket.OPEN) {
+        const cmd = keyMap[activeKey];
+        ws.send(`${cmd}:50`);
+      }
+      pollGamepad();
+    }, 100);
+  </script>
+</body>
+</html>
